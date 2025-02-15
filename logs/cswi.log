@@ -1,0 +1,3 @@
+dyld[3767]: Library not loaded: @rpath/libiec61850.1.6.0.dylib
+  Referenced from: <C636ED63-290F-3025-9ACD-D7E5BF3385B8> /Users/macbook/FUAD/ICON+/SCADA/substation/IED_SUMULATOR/ied_simulator/src/cswi/cswi_simulator
+  Reason: no LC_RPATH's found

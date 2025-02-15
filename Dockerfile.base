@@ -1,0 +1,55 @@
+# Stage 1: Dependencies
+FROM debian:stable-slim
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install dependensi utama
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    git \
+    cmake \
+    wget \
+    openjdk-17-jdk \
+    libssl-dev \
+    tree \
+    && rm -rf /var/lib/apt/lists/*
+
+# Clone libiec61850
+WORKDIR /libiec61850
+RUN git clone https://github.com/mz-automation/libiec61850.git .
+
+# Download dan ekstrak mbedtls 2.28
+RUN mkdir -p third_party/mbedtls \
+    && cd third_party/mbedtls \
+    && wget https://github.com/Mbed-TLS/mbedtls/archive/refs/tags/v2.28.7.tar.gz \
+    && tar -xzf v2.28.7.tar.gz \
+    && mv mbedtls-2.28.7 mbedtls-2.28
+
+# Build library dengan TLS support
+WORKDIR /libiec61850
+RUN make WITH_MBEDTLS=1 \
+    && make install \
+    && ldconfig
+
+# Debug: Tampilkan struktur direktori
+RUN echo "Struktur direktori:" && tree -L 3
+
+# Debug: Cari header files
+RUN echo "Mencari header files:" && find . -name "*.h"
+
+# Salin header files (disesuaikan dengan hasil pencarian)
+RUN mkdir -p /usr/local/include/libiec61850 \
+    && find . -name "*.h" -exec cp {} /usr/local/include/libiec61850/ \;
+
+# Salin genmodel.jar
+RUN mkdir -p /usr/local/share/libiec61850/tools/model_generator \
+    && cp tools/model_generator/genmodel.jar /usr/local/share/libiec61850/tools/model_generator/
+
+# Set working directory
+WORKDIR /app
+
+# Environment variable untuk libiec61850
+ENV LD_LIBRARY_PATH=/usr/local/lib
+ENV PATH="/usr/local/bin:${PATH}"
+
+# Default command
+CMD ["/bin/bash"]

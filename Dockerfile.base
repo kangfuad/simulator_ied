@@ -1,55 +1,63 @@
 # Stage 1: Dependencies
-FROM debian:stable-slim
+FROM debian:bullseye-slim
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install dependensi utama
+# Install dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     git \
     cmake \
     wget \
-    openjdk-17-jdk \
+    ca-certificates \
     libssl-dev \
-    tree \
+    pkg-config \
+    unzip \
+    python3 \
+    python3-pip \
     && rm -rf /var/lib/apt/lists/*
 
-# Clone libiec61850
-WORKDIR /libiec61850
-RUN git clone https://github.com/mz-automation/libiec61850.git .
+# Create directory for dependencies
+WORKDIR /libiec61850/third_party
 
-# Download dan ekstrak mbedtls 2.28
-RUN mkdir -p third_party/mbedtls \
-    && cd third_party/mbedtls \
+# Download and build MbedTLS
+RUN mkdir -p mbedtls \
+    && cd mbedtls \
     && wget https://github.com/Mbed-TLS/mbedtls/archive/refs/tags/v2.28.7.tar.gz \
     && tar -xzf v2.28.7.tar.gz \
-    && mv mbedtls-2.28.7 mbedtls-2.28
-
-# Build library dengan TLS support
-WORKDIR /libiec61850
-RUN make WITH_MBEDTLS=1 \
+    && cd mbedtls-2.28.7 \
+    && mkdir build \
+    && cd build \
+    && cmake .. \
+    && make WITH_MBEDTLS=1 \
     && make install \
     && ldconfig
 
-# Debug: Tampilkan struktur direktori
-RUN echo "Struktur direktori:" && tree -L 3
+# Clone libIEC61850
+WORKDIR /libiec61850
+RUN rm -rf * && git clone https://github.com/mz-automation/libiec61850.git .
 
-# Debug: Cari header files
-RUN echo "Mencari header files:" && find . -name "*.h"
+# Create a CMake toolchain file
+RUN echo "set(CMAKE_C_FLAGS \"\${CMAKE_C_FLAGS} -fPIC\")" > toolchain.cmake
 
-# Salin header files (disesuaikan dengan hasil pencarian)
-RUN mkdir -p /usr/local/include/libiec61850 \
-    && find . -name "*.h" -exec cp {} /usr/local/include/libiec61850/ \;
+# Build library with MbedTLS support
+RUN mkdir -p build \
+    && cd build \
+    && cmake .. \
+    && make VERBOSE=1 \
+    && make install \
+    && ldconfig
 
-# Salin genmodel.jar
-RUN mkdir -p /usr/local/share/libiec61850/tools/model_generator \
-    && cp tools/model_generator/genmodel.jar /usr/local/share/libiec61850/tools/model_generator/
+# # Copy headers and library to standard locations
+# RUN mkdir -p /usr/local/include/libiec61850 \
+#     && cp -r src/inc/* /usr/local/include/libiec61850/ \
+#     && cp build/src/libiec61850.* /usr/local/lib/
+
+# Set environment variables
+ENV LD_LIBRARY_PATH=/usr/local/lib:/usr/local/mbedtls/lib
+ENV PATH="/usr/local/bin:/usr/local/mbedtls/bin:${PATH}"
 
 # Set working directory
 WORKDIR /app
-
-# Environment variable untuk libiec61850
-ENV LD_LIBRARY_PATH=/usr/local/lib
-ENV PATH="/usr/local/bin:${PATH}"
 
 # Default command
 CMD ["/bin/bash"]

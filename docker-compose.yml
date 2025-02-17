@@ -1,32 +1,44 @@
 version: '3.8'
 
 services:
+  base:
+    build:
+      context: .
+      dockerfile: Dockerfile.base
+    image: libiec61850-base:latest
+
   xcbr_simulator:
     build:
       context: .
       dockerfile: src/xcbr/Dockerfile
     container_name: xcbr_simulator
-    volumes:
-      - /usr/local:/usr/local   # Bind mount untuk library
+    depends_on:
+      - base
     ports:
-      - "5003:5003"
+      - "10104:10104"
+    volumes:
+      - /usr/local:/usr/local
 
-  # cswi_simulator:
-  #   build:
-  #     context: .
-  #     dockerfile: src/cswi/Dockerfile
-  #   container_name: cswi_simulator
-  #   volumes:
-  #     - /usr/local:/usr/local   # Bind mount untuk library
-  #   ports:
-  #     - "5001:5001"
+  cswi_simulator:
+    build:
+      context: .
+      dockerfile: src/cswi/Dockerfile
+    container_name: cswi_simulator
+    depends_on:
+      - base
+    ports:
+      - "10102:10102"
+    volumes:
+      - /usr/local:/usr/local
 
-  # mmxu_simulator:
-  #   build:
-  #     context: .
-  #     dockerfile: src/mmxu/Dockerfile
-  #   container_name: mmxu_simulator
-  #   volumes:
-  #     - /usr/local:/usr/local   # Bind mount untuk library
-  #   ports:
-  #     - "5002:5002"
+  mmxu_simulator:
+    build:
+      context: .
+      dockerfile: src/mmxu/Dockerfile
+    container_name: mmxu_simulator
+    depends_on:
+      - base
+    ports:
+      - "10103:10103"
+    volumes:
+      - /usr/local:/usr/local

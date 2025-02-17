@@ -1,31 +1,21 @@
-# Menggunakan image dasar debian:bullseye-slim
-FROM debian:bullseye-slim
+FROM libiec61850-base:latest
 
-# Menetapkan direktori kerja di dalam container
-WORKDIR /app
-
-# Install dependensi yang diperlukan
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    git \
-    cmake \
-    wget \
-    && rm -rf /var/lib/apt/lists/*
-
-# Clone repo library mz-automation/libiec61850
-RUN git clone https://github.com/mz-automation/libiec61850.git
-
-# Salin file dari host ke dalam container (sesuaikan dengan lokasi direktori lokal Anda)
-COPY ./src/cswi /app/cswi
+# Salin file simulator, model, dan static model untuk cswi
 COPY ./model/model_cswi.icd /app/model_cswi.icd
-
-# Build dan install library
-WORKDIR /app/libiec61850
-RUN cmake . && make && make install
+COPY ./src/cswi/cswi_simulator.c /app/cswi/cswi_simulator.c
+COPY ./src/cswi/static_model.c /app/cswi/static_model.c
+COPY ./src/cswi/static_model.h /app/cswi/static_model.h
 
 # Kompilasi simulator cswi
 WORKDIR /app/cswi
-RUN gcc cswi_simulator.c static_model.c -o cswi_simulator -lm
+RUN gcc cswi_simulator.c static_model.c \
+    -I/usr/local/include/libiec61850 \
+    -L/usr/local/lib \
+    -liec61850 \
+    -o cswi_simulator -lm \
+    -std=gnu99 \
+    -DMBEDTLS_HAVE_TIME \
+    -D_POSIX_C_SOURCE=200809L
 
 # Menentukan perintah yang akan dijalankan saat container berjalan
 CMD ["./cswi_simulator"]

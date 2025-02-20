@@ -1,0 +1,35 @@
+# Dockerfile.model-generator
+FROM libiec61850-base:latest
+
+WORKDIR /app
+
+RUN mkdir -p /app/model /app/src/cswi /app/src/mmxu /app/src/xcbr
+
+# Create generate_models.sh script
+RUN echo '#!/bin/bash\n\
+\n\
+while [ ! -f /app/model/model_cswi.icd ] || \
+      [ ! -f /app/model/model_mmxu.icd ] || \
+      [ ! -f /app/model/model_xcbr.icd ]; do\n\
+    echo "Waiting for model files..."\n\
+    sleep 1\n\
+done\n\
+\n\
+cd /usr/local/share/libiec61850/model_generator\n\
+\n\
+echo "Generating CSWI model..."\n\
+java -jar genmodel.jar /app/model/model_cswi.icd /app/src/cswi/static_model\n\
+\n\
+echo "Generating MMXU model..."\n\
+java -jar genmodel.jar /app/model/model_mmxu.icd /app/src/mmxu/static_model\n\
+\n\
+echo "Generating XCBR model..."\n\
+java -jar genmodel.jar /app/model/model_xcbr.icd /app/src/xcbr/static_model\n\
+\n\
+echo "All models generated successfully"\n\
+\n\
+tail -f /dev/null\n\
+' > /app/generate_models.sh && chmod +x /app/generate_models.sh
+
+CMD ["/app/generate_models.sh"]
+

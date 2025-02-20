@@ -1,3 +1,4 @@
+# docker-compose.yml
 version: '3.8'
 
 services:
@@ -7,38 +8,62 @@ services:
       dockerfile: Dockerfile.base
     image: libiec61850-base:latest
 
-  xcbr_simulator:
+  model-generator:
     build:
       context: .
-      dockerfile: src/xcbr/Dockerfile
-    container_name: xcbr_simulator
+      dockerfile: Dockerfile.model-generator
+    volumes:
+      - ./model:/app/model
+      - ./src:/app/src
     depends_on:
       - base
-    ports:
-      - "10104:10104"
-    volumes:
-      - /usr/local:/usr/local
 
-  cswi_simulator:
+  cswi:
     build:
       context: .
       dockerfile: src/cswi/Dockerfile
-    container_name: cswi_simulator
+    container_name: cswi-simulator
     depends_on:
-      - base
+      - model-generator
     ports:
       - "10102:10102"
     volumes:
-      - /usr/local:/usr/local
+      - ./model:/app/model
+      - ./src/cswi:/app/src/cswi
+    networks:
+      - iec61850-network
 
-  mmxu_simulator:
+  mmxu:
     build:
       context: .
       dockerfile: src/mmxu/Dockerfile
-    container_name: mmxu_simulator
+    container_name: mmxu-simulator
     depends_on:
-      - base
+      - model-generator
     ports:
       - "10103:10103"
     volumes:
-      - /usr/local:/usr/local
+      - ./model:/app/model
+      - ./src/mmxu:/app/src/mmxu
+    networks:
+      - iec61850-network
+
+  xcbr:
+    build:
+      context: .
+      dockerfile: src/xcbr/Dockerfile
+    container_name: xcbr-simulator
+    depends_on:
+      - model-generator
+    ports:
+      - "10104:10104"
+    volumes:
+      - ./model:/app/model
+      - ./src/xcbr:/app/src/xcbr
+    networks:
+      - iec61850-network
+
+networks:
+  iec61850-network:
+    name: iec61850-network
+
